@@ -14,12 +14,13 @@ if [ -z "$GITHUB_URL" ] || [ -z "$GITHUB_TOKEN" ]; then
 fi
 
 # Create local directories for volumes if they don't exist
-mkdir -p ./data/logs
-mkdir -p ./data/work
+# We use .runner to keep it hidden and ignored by git (see .gitignore)
+mkdir -p ./.runner/logs
+mkdir -p ./.runner/work
 
 echo "Starting runner '$RUNNER_NAME' for '$GITHUB_URL'..."
-echo "Logs will be in $(pwd)/data/logs"
-echo "Workdir will be in $(pwd)/data/work"
+echo "Logs will be in $(pwd)/.runner/logs"
+echo "Workdir will be in $(pwd)/.runner/work"
 
 # Calculate local architecture for correct labels (optional, but good for run)
 # But labels are usually handled by runner config default.
@@ -30,9 +31,10 @@ docker run -d \
     --name "$RUNNER_NAME" \
     -e GITHUB_URL="$GITHUB_URL" \
     -e GITHUB_TOKEN="$GITHUB_TOKEN" \
+    -e GH_PAT="$GH_PAT" \
     -e RUNNER_NAME="$RUNNER_NAME" \
-    -v "$(pwd)/data/logs:/home/runner/_diag" \
-    -v "$(pwd)/data/work:/home/runner/_work" \
+    -v "$(pwd)/.runner/logs:/home/runner/_diag" \
+    -v "$(pwd)/.runner/work:/home/runner/_work" \
     -p 2222:22 \
     "$IMAGE_NAME"
 

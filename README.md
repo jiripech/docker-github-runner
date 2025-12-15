@@ -5,11 +5,16 @@ This repository contains a Docker-based GitHub Actions Runner that supports:
 - **SSH access** for debugging (injected automatically during build).
 - **Persistent logs and workspace** via Docker volumes.
 
+> [!WARNING]
+> **Security Notice**: Be extremely cautious when using Self-Hosted Runners on **Public Repositories**. malicious pull requests from forks can automatically run on your infrastructure and access secrets or local network resources. It is recommended to use "Require approval for all outside collaborators" in your repository settings.
+
 ## Project Structure
 
 *   `docker/`: Contains the `Dockerfile`, `entrypoint.sh` and configuration files.
 *   `scripts/`: Helper scripts for building and managing the runner.
-*   `LICENSE`: Project license.
+*   `LICENSE.md`: Project license.
+*   `README.md`: Project documentation.
+*   `CONTRIBUTING.md`: Project contribution guidelines.
 
 ## Prerequisites
 
@@ -102,13 +107,13 @@ To inspect logs from the host or persist the build cache between restarts, map v
 **Example:**
 
 ```bash
-mkdir -p ./data/logs ./data/work
+mkdir -p ./.runner/logs ./.runner/work
 
 docker run -d \
-  -v $(pwd)/data/logs:/home/runner/_diag \
-  -v $(pwd)/data/work:/home/runner/_work \
+  -v $(pwd)/.runner/logs:/home/runner/_diag \
+  -v $(pwd)/.runner/work:/home/runner/_work \
   -e GITHUB_URL="..." \
-  -e GITHUB_TOKEN="..." \
+  -e GH_PAT="..." \
   <image-name>
 ```
 
