@@ -1,0 +1,22 @@
+name: Self-Hosted Runner Test
+
+on: [push, workflow_dispatch]
+
+jobs:
+  test-runner:
+    runs-on: [self-hosted, linux, arm64] # Adjust 'arm64' to 'x64' if testing on Intel
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check Architecture
+        run: uname -a
+      
+      - name: Check User
+        run: whoami && id
+      
+      - name: Check Disk Space
+        run: df -h
+      
+      - name: Hello World
+        run: echo "Hello from the self-hosted runner!"
