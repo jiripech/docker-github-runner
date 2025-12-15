@@ -55,10 +55,22 @@ docker run -d \
 
 ### Environment Variables
 
+### Auto-Registration (Recommended)
+
+Instead of manually generating a short-lived token, you can provide a **Personal Access Token (PAT)** with `repo` scope. The runner will automatically generate a registration token.
+
+```bash
+docker run -d \
+  -e GITHUB_URL="https://github.com/your-org/your-repo" \
+  -e GH_PAT="ghp_..." \
+  <image-name>
+```
+
 | Variable | Description | Required | Default |
 | :--- | :--- | :--- | :--- |
 | `GITHUB_URL` | Full URL to the repository or organization. | **Yes** | - |
-| `GITHUB_TOKEN` | Registration Token (from Settings -> Actions -> Runners). | **Yes** | - |
+| `GITHUB_TOKEN` | *Legacy*: Registration Token (short-lived). | **Yes** (if no PAT) | - |
+| `GH_PAT` | *New*: Personal Access Token with `repo` scope. Auto-generates registration token. | **Yes** (if no Token) | - |
 | `RUNNER_NAME` | Name of the runner in GitHub UI. | No | `hostname` |
 | `RUNNER_LABELS` | Comma-separated labels (e.g. `gpu,linux`). | No | `default` |
 
