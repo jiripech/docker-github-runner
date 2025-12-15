@@ -8,8 +8,27 @@ if [ -z "$GITHUB_URL" ]; then
 fi
 
 if [ -z "$GITHUB_TOKEN" ]; then
-    echo "Error: GITHUB_TOKEN is not set"
-    exit 1
+    if [ -n "$GH_PAT" ] && [ -n "$GITHUB_URL" ]; then
+        echo "Generating Registration Token using GH_PAT..."
+        # Extract owner and repo from URL (e.g. https://github.com/owner/repo)
+        REPO_PATH=$(echo "$GITHUB_URL" | sed 's|https://github.com/||')
+
+        # Authenticate with gh
+        echo "$GH_PAT" | gh auth login --with-token
+
+        # Fetch token
+        GITHUB_TOKEN=$(gh api --method POST -H "Accept: application/vnd.github+json" \
+            "/repos/$REPO_PATH/actions/runners/registration-token" | jq -r .token)
+
+        if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "null" ]; then
+            echo "Error: Failed to generate registration token via API."
+            exit 1
+        fi
+        echo "Registration Token generated successfully."
+    else
+        echo "Error: GITHUB_TOKEN is not set (and no GH_PAT provided)"
+        exit 1
+    fi
 fi
 
 # Set defaults
