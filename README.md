@@ -1,6 +1,7 @@
 # GitHub Actions Runner with SSH Support
 
 This repository contains a Docker-based GitHub Actions Runner that supports:
+
 - **Multi-architecture** builds (amd64, arm64).
 - **SSH access** for debugging (injected automatically during build).
 - **Persistent logs and workspace** via Docker volumes.
@@ -10,16 +11,16 @@ This repository contains a Docker-based GitHub Actions Runner that supports:
 
 ## Project Structure
 
-*   `docker/`: Contains the `Dockerfile`, `entrypoint.sh` and configuration files.
-*   `scripts/`: Helper scripts for building and managing the runner.
-*   `LICENSE.md`: Project license.
-*   `README.md`: Project documentation.
-*   `CONTRIBUTING.md`: Project contribution guidelines.
+- `docker/`: Contains the `Dockerfile`, `entrypoint.sh` and configuration files.
+- `scripts/`: Helper scripts for building and managing the runner.
+- `LICENSE.md`: Project license.
+- `README.md`: Project documentation.
+- `CONTRIBUTING.md`: Project contribution guidelines.
 
 ## Prerequisites
 
-*   Docker Desktop (or Docker Engine with Buildx support).
-*   A GitHub Repository (URL + Token).
+- Docker Desktop (or Docker Engine with Buildx support).
+- A GitHub Repository (URL + Token).
 
 ## Building the Image
 
@@ -29,20 +30,20 @@ Use the provided build script to create the Docker image.
 ./scripts/build.sh <image-name> [push|load]
 ```
 
-*   `push`: Builds for both `amd64` and `arm64` and pushes to the registry (requires `docker login`).
-*   `load`: Builds for your local architecture only and loads it into your local Docker daemon (for testing).
+- `push`: Builds for both `amd64` and `arm64` and pushes to the registry (requires `docker login`).
+- `load`: Builds for your local architecture only and loads it into your local Docker daemon (for testing).
 
 ### SSH Key Injection logic
 
 The build script automatically secures the runner by injecting **your strongest local public SSH key** into the image's `authorized_keys`.
 
-1.  It searches `~/.ssh/` for public keys in this preference order:
-    *   `id_ed25519.pub` (Best)
-    *   `id_ecdsa.pub`
-    *   `id_rsa.pub`
-    *   `id_dsa.pub`
-2.  It copies **only one** (the strongest found) into the container.
-3.  **Result**: You can SSH into the running container without managing passwords or copying keys manually.
+1. It searches `~/.ssh/` for public keys in this preference order:
+    - `id_ed25519.pub` (preferred)
+    - `id_ecdsa.pub`
+    - `id_rsa.pub`
+    - `id_dsa.pub`
+2. It copies **only one** (the strongest found) into the container.
+3. **Result**: You can SSH into the running container without managing passwords or copying keys manually.
 
 ## Running the Runner
 
@@ -92,17 +93,19 @@ docker run -d \
 ```
 
 Connect using:
+
 ```bash
 ssh -p 2222 runner@localhost
 ```
-*(Your local SSH key is already authorized!)*
+
+ℹ️ **(Your local SSH key is already authorized!)**
 
 ### Data Persistence (Logs & Cache)
 
 To inspect logs from the host or persist the build cache between restarts, map volume mounts to these internal paths:
 
-*   `_diag`: Runner logs.
-*   `_work`: Build workspace (repo checkout, build artifacts).
+- `_diag`: Runner logs.
+- `_work`: Build workspace (repo checkout, build artifacts).
 
 **Example:**
 
@@ -121,5 +124,5 @@ docker run -d \
 
 ## Troubleshooting
 
-*   **SSH Permission Denied**: Check `docker logs <container-id>` to ensure `sshd` started. Verify your local key matches the one injected during build.
-*   **404 Auth Error**: Check your `GITHUB_TOKEN` expiration and scope.
+- **SSH Permission Denied**: Check `docker logs <container-id>` to ensure `sshd` started. Verify your local key matches the one injected during build.
+- **404 Auth Error**: Check your `GITHUB_TOKEN` expiration and scope.
