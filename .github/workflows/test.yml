@@ -1,10 +1,13 @@
-name: Self-Hosted Runner Test
+name: Run tests for self-hosted github runner
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
 
 jobs:
   test-runner-arm64:
-    runs-on: [self-hosted, linux, arm64]
+    runs-on: [linux, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,7 +25,7 @@ jobs:
         run: echo "Hello from the self-hosted runner!"
 
   test-runner-x64:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: [linux, x64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
