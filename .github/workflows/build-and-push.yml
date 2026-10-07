@@ -37,7 +37,7 @@ jobs:
       - name: Create authorized_keys file
         run: |
           echo "${AUTH_KEY}" >docker/authorized_keys
-          ls -laR /
+          ls -la /docker
 
       - name: Compute image tag
         id: meta
