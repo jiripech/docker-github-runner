@@ -11,7 +11,8 @@ if [ -z "$GITHUB_TOKEN" ]; then
     if [ -n "$GH_PAT" ] && [ -n "$GITHUB_URL" ]; then
         echo "Generating Registration Token using GH_PAT..."
         # Extract owner and repo from URL (e.g. https://github.com/owner/repo)
-        REPO_PATH=$(echo "$GITHUB_URL" | sed 's|https://github.com/||')
+        # Remove .git suffix if present (single sed call)
+        REPO_PATH=$(echo "$GITHUB_URL" | sed 's|https://github.com/||; s|\.git$||')
 
         # Authenticate with gh
         echo "$GH_PAT" | gh auth login --with-token
