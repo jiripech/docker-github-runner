@@ -7,7 +7,11 @@ This repository contains a Docker-based GitHub Actions Runner that supports:
 - **Persistent logs and workspace** via Docker volumes.
 
 > [!WARNING]
-> **Security Notice**: Be extremely cautious when using Self-Hosted Runners on **Public Repositories**. malicious pull requests from forks can automatically run on your infrastructure and access secrets or local network resources. It is recommended to use "Require approval for all outside collaborators" in your repository settings.
+> **Security Notice**: Be extremely cautious when using Self-Hosted Runners on
+**Public Repositories**! Malicious pull requests from forks can automatically
+run on your infrastructure and access secrets or local network resources. It is
+recommended to use **"Require approval for all outside collaborators"** in your
+repository settings.
 
 ## Project Structure
 
@@ -30,12 +34,15 @@ Use the provided build script to create the Docker image.
 ./scripts/build.sh <image-name> [push|load]
 ```
 
-- `push`: Builds for both `amd64` and `arm64` and pushes to the registry (requires `docker login`).
-- `load`: Builds for your local architecture only and loads it into your local Docker daemon (for testing).
+- `push`: Builds for both `amd64` and `arm64` and pushes to the registry
+(requires `docker login`).
+- `load`: Builds for your local architecture only and loads it into your local
+Docker daemon (for testing).
 
 ### SSH Key Injection logic
 
-The build script automatically secures the runner by injecting **your strongest local public SSH key** into the image's `authorized_keys`.
+The build script automatically secures the runner by injecting
+**your strongest local public SSH key** into the image's `authorized_keys`.
 
 1. It searches `~/.ssh/` for public keys in this preference order:
     - `id_ed25519.pub` (preferred)
@@ -43,7 +50,28 @@ The build script automatically secures the runner by injecting **your strongest 
     - `id_rsa.pub`
     - `id_dsa.pub`
 2. It copies **only one** (the strongest found) into the container.
-3. **Result**: You can SSH into the running container without managing passwords or copying keys manually.
+3. **Result**: You can SSH into the running container without managing passwords
+  or copying keys manually.
+
+### Building using Github workflow
+
+It's simple, but some [variables and secrets][encryptedSecretsLink] are
+necessary to be set before you start the build
+
+#### Variables
+
+My values as examples
+
+- **DOCKER_IMAGE_NAME**=`docker-github-runner`
+- **DOCKER_NAMESPACE**=`hqcz`
+
+#### Secrests
+
+No examples here, see [scripts/build.sh] for details.
+
+- DOCKER_TOKEN (your docker hub token)
+- DOCKER_USERNAME (your docker hub username)
+- SSH_KEY_PUBLIC (usually `~/.ssh/id_ed25519.pub`)
 
 ## Running the Runner
 
@@ -63,7 +91,9 @@ docker run -d \
 
 ### Auto-Registration (Recommended)
 
-Instead of manually generating a short-lived token, you can provide a **Personal Access Token (PAT)** with `repo` scope. The runner will automatically generate a registration token.
+Instead of manually generating a short-lived token, you can provide
+a **Personal Access Token (PAT)** with `repo` scope. The runner will
+automatically generate a registration token.
 
 ```bash
 docker run -d \
@@ -72,17 +102,34 @@ docker run -d \
   <image-name>
 ```
 
-| Variable | Description | Required | Default |
-| :--- | :--- | :--- | :--- |
-| `GITHUB_URL` | Full URL to the repository or organization. | **Yes** | - |
-| `GITHUB_TOKEN` | *Legacy*: Registration Token (short-lived). | **Yes** (if no PAT) | - |
-| `GH_PAT` | *New*: Personal Access Token with `repo` scope. Auto-generates registration token. | **Yes** (if no Token) | - |
-| `RUNNER_NAME` | Name of the runner in GitHub UI. | No | `hostname` |
-| `RUNNER_LABELS` | Comma-separated labels (e.g. `gpu,linux`). | No | `default` |
+#### Runtime Variables
+
+##### `GITHUB_URL`
+
+Full HTTPS URL to the repository or organization (without '.git' at the end)
+
+##### `GITHUB_TOKEN`
+
+*Legacy*: Registration Token (short-lived).
+Required if no `GH_PAT` provided.
+
+##### `GH_PAT`
+
+Personal Access Token with `repo` scope. Auto-generates registration token.
+Required in no `GITHUB_TOKEN` provided.
+
+##### `RUNNER_NAME`
+
+Name of the runner in GitHub UI. If not provided defaults to `hostname`
+
+##### `RUNNER_LABELS`
+
+**Optional** comma-separated labels (e.g. `gpu,linux,insecure`).
 
 ### SSH Access
 
-Port 22 is exposed by default. Map it to a custom port (e.g. 2222) to avoid conflict with the host.
+Port 22 is exposed by default. Map it to a custom port (e.g. 2222)
+to avoid conflict with the host.
 
 ```bash
 docker run -d \
@@ -102,7 +149,8 @@ ssh -p 2222 runner@localhost
 
 ### Data Persistence (Logs & Cache)
 
-To inspect logs from the host or persist the build cache between restarts, map volume mounts to these internal paths:
+To inspect logs from the host or persist the build cache between restarts,
+map volume mounts to these internal paths:
 
 - `_diag`: Runner logs.
 - `_work`: Build workspace (repo checkout, build artifacts).
@@ -120,9 +168,15 @@ docker run -d \
   <image-name>
 ```
 
-**Note on Permissions:** The runner runs as user `runner` (uid 1000). Ensure your host directories are accessible/writable by this user, or use Docker Desktop's loose permission model.
+**Note on Permissions:** The runner runs as user `runner` (uid 1000).
+Ensure your host directories are accessible/writable by this user,
+or use Docker Desktop's loose permission model.
 
 ## Troubleshooting
 
-- **SSH Permission Denied**: Check `docker logs <container-id>` to ensure `sshd` started. Verify your local key matches the one injected during build.
+- **SSH Permission Denied**: Check `docker logs <container-id>`
+  to ensure `sshd` started. Verify your local key matches the one
+  injected during build.
 - **404 Auth Error**: Check your `GITHUB_TOKEN` expiration and scope.
+
+[encryptedSecretsLink]: https://docs.github.com/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets
