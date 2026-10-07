@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl jq git sudo ca-certificates gnupg lsb-release openssh-server \
     && rm -rf /var/lib/apt/lists/*
 
-# Create runner user
 # Create runner user and set shell/password to avoid locked account
 RUN useradd -m -s /bin/bash runner && \
     echo "runner:runner" | chpasswd && \
