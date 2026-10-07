@@ -10,7 +10,7 @@ env:
   IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
   REGISTRY: docker.io
   NAMESPACE: ${{ vars.DOCKER_NAMESPACE }}
-
+  AUTH_KEYS: ${{ secrets.SSH_KEY_PUBLIC }}
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -33,7 +33,10 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-
+      - name: Create authorized_keys file
+        run: |
+          echo "${AUTH_KEYS}" >authorized_keys
+          echo "Done creating up authorized_keys file"
       - name: Compute image tag
         id: meta
         run: |
