@@ -28,6 +28,22 @@ RUNNER_BASE_DIR="/home/runner"
 echo "Starting SSH Daemon..."
 sudo /usr/sbin/sshd
 
+# Handle UNREGISTER_TOKENS - unregister runners using provided tokens
+if [ -n "$UNREGISTER_TOKENS" ]; then
+    echo "=========================================="
+    echo "Unregistering runners using provided tokens..."
+    echo "=========================================="
+    IFS=',' read -ra UNREGISTER_TOKEN_ARRAY <<< "$UNREGISTER_TOKENS"
+    for token in "${UNREGISTER_TOKEN_ARRAY[@]}"; do
+        token=$(echo "$token" | xargs)  # trim whitespace
+        if [ -n "$token" ]; then
+            echo "Unregistering runner with token: ${token:0:10}..."
+            ./config.sh remove --token "$token" 2>/dev/null || true
+        fi
+    done
+    echo "Unregistration complete."
+fi
+
 # Split GITHUB_URL by comma into array
 IFS=',' read -ra GITHUB_URLS_RAW <<< "$GITHUB_URL"
 

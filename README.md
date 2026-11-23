@@ -110,7 +110,8 @@ docker run -d \
   <image-name>
 ```
 
-This will create runners named `my-runner-repo1`, `my-runner-repo2`, and `my-runner-repo3`.
+This will create runners named `my-runner-repo1`, `my-runner-repo2`, and
+`my-runner-repo3`.
 
 ### Environment Variables
 
@@ -162,7 +163,8 @@ Ignored when `RUNNER_NAME_PREFIX` is set.
 
 ##### `RUNNER_LABELS`
 
-**Optional** comma-separated labels applied to all runners (e.g. `gpu,linux,insecure`).
+**Optional** comma-separated labels applied to all runners (e.g. `gpu,linux,
+insecure`).
 Default: `default`
 
 ##### `RUNNER_WORKDIR`
@@ -170,6 +172,18 @@ Default: `default`
 **Optional** base work directory for all runners.
 Default: `_work`
 Each runner gets a subdirectory: `${RUNNER_WORKDIR}/${repo_name}`
+
+##### `UNREGISTER_TOKENS`
+
+**Optional** comma-separated list of runner removal tokens.
+Use this to clean up previously registered runners when the container is
+recreated.
+Tokens can be obtained from GitHub UI (Settings → Actions → Runners → click
+runner → "Remove runner" → copy token from command).
+
+Example: `UNREGISTER_TOKENS="token1,token2,AAW63K6VAWLL6XJ24GA5CFTLARVMS"`
+
+Each token will be used to run `./config.sh remove --token <token>` before configuring new runners.
 
 ### SSH Access
 

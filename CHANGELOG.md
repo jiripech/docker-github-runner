@@ -1,10 +1,15 @@
 # CHANGELOG
 
+## v1.2.0
+
+- **Added** REMOVE_TOKENS parameter
+
 ## v1.1.1
 
 - **Fixed** 'entrypoint.sh' call to non-existing config.sh
 - **Fixed** markdownlint issues
-- **Updated** GITHUB_URL handling, so it can be shorter
+
+- **Improved** GITHUB_URL handling, so it can be shorter
 
 ## v1.1.0
 
