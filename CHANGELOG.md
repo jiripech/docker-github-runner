@@ -2,7 +2,9 @@
 
 ## v1.2.0
 
-- **Added** REMOVE_TOKENS parameter
+- **Added** **UNREGISTER_TOKENS** parameter to support muliple existing runners
+  to be unregistered first if they persist in github, (see
+  [README.md](README.md) for details)
 
 ## v1.1.1
 
