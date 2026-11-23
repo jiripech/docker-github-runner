@@ -77,7 +77,7 @@ No examples here, see [scripts/build.sh] for details.
 
 To run the container, you must provide the GitHub URL and a Registration Token.
 
-### Basic Usage
+### Single Runner (Legacy)
 
 ```bash
 docker run -d \
@@ -87,44 +87,69 @@ docker run -d \
   <image-name>
 ```
 
-### Environment Variables
+### Multi-Runner (Recommended)
 
-### Auto-Registration (Recommended)
-
-Instead of manually generating a short-lived token, you can provide
-a **Personal Access Token (PAT)** with `repo` scope. The runner will
-automatically generate a registration token.
+Run multiple self-hosted runners in a single container by providing a comma-delimited list of repository URLs and a runner name prefix.
 
 ```bash
 docker run -d \
-  -e GITHUB_URL="https://github.com/your-org/your-repo" \
+  -e GITHUB_URL="https://github.com/your-org/repo1,https://github.com/your-org/repo2" \
   -e GH_PAT="ghp_..." \
+  -e RUNNER_NAME_PREFIX="my-runner" \
   <image-name>
 ```
 
-#### Runtime Variables
+This will create runners named `my-runner-repo1` and `my-runner-repo2`.
+
+### Environment Variables
+
+#### Auto-Registration (Required for Multi-Runner)
+
+Instead of manually generating a short-lived token, you provide
+a **Personal Access Token (PAT)** with `repo` scope. The runner will
+automatically generate a registration token for each repository.
 
 ##### `GITHUB_URL`
 
-Full HTTPS URL to the repository or organization (without '.git' at the end)
+**Single runner**: Full HTTPS URL to the repository or organization (without '.git' at the end)
+
+**Multi-runner**: Comma-delimited list of full HTTPS URLs to repositories/organizations
+- Example: `"https://github.com/owner/repo1,https://github.com/owner/repo2"`
+- Spaces around commas are trimmed automatically
+
+##### `GH_PAT`
+
+Personal Access Token with `repo` scope. Auto-generates registration tokens.
+**Required for multi-runner mode.** Also works for single runner.
 
 ##### `GITHUB_TOKEN`
 
 *Legacy*: Registration Token (short-lived).
-Required if no `GH_PAT` provided.
+Only for single-runner mode. Not supported with multiple URLs.
 
-##### `GH_PAT`
+##### `RUNNER_NAME_PREFIX`
 
-Personal Access Token with `repo` scope. Auto-generates registration token.
-Required in no `GITHUB_TOKEN` provided.
+**Multi-runner only**: Prefix for runner names.
+Each runner will be named `${RUNNER_NAME_PREFIX}-${repo_name}`.
+- Example: `RUNNER_NAME_PREFIX="ci-runner"` with repo `my-app` → `ci-runner-my-app`
+- **Required** when using multiple URLs in `GITHUB_URL`
 
 ##### `RUNNER_NAME`
 
-Name of the runner in GitHub UI. If not provided defaults to `hostname`
+**Single runner only**: Name of the runner in GitHub UI.
+If not provided defaults to `hostname`.
+Ignored when `RUNNER_NAME_PREFIX` is set.
 
 ##### `RUNNER_LABELS`
 
-**Optional** comma-separated labels (e.g. `gpu,linux,insecure`).
+**Optional** comma-separated labels applied to all runners (e.g. `gpu,linux,insecure`).
+Default: `default`
+
+##### `RUNNER_WORKDIR`
+
+**Optional** base work directory for all runners.
+Default: `_work`
+Each runner gets a subdirectory: `${RUNNER_WORKDIR}/${repo_name}`
 
 ### SSH Access
 

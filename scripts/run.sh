@@ -1,15 +1,24 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/run.sh <GITHUB_URL> <GITHUB_TOKEN> [RUNNER_NAME]
+# Usage: ./scripts/run.sh <GITHUB_URL> <GH_PAT> <RUNNER_NAME_PREFIX> [RUNNER_LABELS] [IMAGE_NAME]
+# For single runner (legacy): ./scripts/run.sh <GITHUB_URL> <GITHUB_TOKEN> [RUNNER_NAME]
 
 GITHUB_URL=$1
-GITHUB_TOKEN=$2
-RUNNER_NAME=${3:-"my-runner-$(hostname)"}
-IMAGE_NAME="test-runner-complete" # Or whatever image name you built
+GH_PAT=$2
+RUNNER_NAME_PREFIX=$3
+RUNNER_LABELS=${4:-"default"}
+IMAGE_NAME=${5:-"test-runner-complete"}
 
-if [ -z "$GITHUB_URL" ] || [ -z "$GITHUB_TOKEN" ]; then
-    echo "Usage: $0 <GITHUB_URL> <GITHUB_TOKEN> [RUNNER_NAME]"
+if [ -z "$GITHUB_URL" ] || [ -z "$GH_PAT" ] || [ -z "$RUNNER_NAME_PREFIX" ]; then
+    echo "Usage: $0 <GITHUB_URL> <GH_PAT> <RUNNER_NAME_PREFIX> [RUNNER_LABELS] [IMAGE_NAME]"
+    echo ""
+    echo "Examples:"
+    echo "  Single runner (legacy):"
+    echo "    $0 https://github.com/owner/repo ghp_token my-runner"
+    echo ""
+    echo "  Multi-runner:"
+    echo "    $0 \"https://github.com/owner/repo1,https://github.com/owner/repo2\" ghp_token ci-runner \"gpu,linux\""
     exit 1
 fi
 
@@ -18,25 +27,28 @@ fi
 mkdir -p ./.runner/logs
 mkdir -p ./.runner/work
 
-echo "Starting runner '$RUNNER_NAME' for '$GITHUB_URL'..."
+# Determine container name from prefix (first repo)
+FIRST_REPO=$(echo "$GITHUB_URL" | cut -d',' -f1 | xargs)
+REPO_NAME=$(echo "$FIRST_REPO" | sed 's|https://github.com/||; s|\.git$||' | awk -F'/' '{print $NF}')
+CONTAINER_NAME="${RUNNER_NAME_PREFIX}-${REPO_NAME}"
+
+echo "Starting runner(s) with prefix '$RUNNER_NAME_PREFIX' for '$GITHUB_URL'..."
+echo "Container name: $CONTAINER_NAME"
+echo "Labels: $RUNNER_LABELS"
 echo "Logs will be in $(pwd)/.runner/logs"
 echo "Workdir will be in $(pwd)/.runner/work"
 
-# Calculate local architecture for correct labels (optional, but good for run)
-# But labels are usually handled by runner config default.
-# We mapped port 2222 for SSH.
-
 docker run -d \
     --restart unless-stopped \
-    --name "$RUNNER_NAME" \
+    --name "$CONTAINER_NAME" \
     -e GITHUB_URL="$GITHUB_URL" \
-    -e GITHUB_TOKEN="$GITHUB_TOKEN" \
     -e GH_PAT="$GH_PAT" \
-    -e RUNNER_NAME="$RUNNER_NAME" \
+    -e RUNNER_NAME_PREFIX="$RUNNER_NAME_PREFIX" \
+    -e RUNNER_LABELS="$RUNNER_LABELS" \
     -v "$(pwd)/.runner/logs:/home/runner/_diag" \
     -v "$(pwd)/.runner/work:/home/runner/_work" \
     -p 2222:22 \
     "$IMAGE_NAME"
 
-echo "Container '$RUNNER_NAME' started."
+echo "Container '$CONTAINER_NAME' started."
 echo "SSH Access: ssh -p 2222 runner@localhost"
