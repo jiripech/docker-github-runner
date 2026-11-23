@@ -89,17 +89,28 @@ docker run -d \
 
 ### Multi-Runner (Recommended)
 
-Run multiple self-hosted runners in a single container by providing a comma-delimited list of repository URLs and a runner name prefix.
+Run multiple self-hosted runners in a single container by providing
+a comma-delimited list of repository URLs and a runner name prefix.
 
 ```bash
 docker run -d \
-  -e GITHUB_URL="https://github.com/your-org/repo1,https://github.com/your-org/repo2" \
+  -e GITHUB_URL="https://github.com/org/repo1,https://github.com/org/repo2" \
   -e GH_PAT="ghp_..." \
   -e RUNNER_NAME_PREFIX="my-runner" \
   <image-name>
 ```
 
-This will create runners named `my-runner-repo1` and `my-runner-repo2`.
+**Abbreviated URL syntax** (for repos under the same owner):
+
+```bash
+docker run -d \
+  -e GITHUB_URL="https://github.com/org/repo1,/repo2,/repo3" \
+  -e GH_PAT="ghp_..." \
+  -e RUNNER_NAME_PREFIX="my-runner" \
+  <image-name>
+```
+
+This will create runners named `my-runner-repo1`, `my-runner-repo2`, and `my-runner-repo3`.
 
 ### Environment Variables
 
@@ -111,10 +122,17 @@ automatically generate a registration token for each repository.
 
 ##### `GITHUB_URL`
 
-**Single runner**: Full HTTPS URL to the repository or organization (without '.git' at the end)
+**Single runner**: Full HTTPS URL to the repository or organization (without
+  '.git' at the end)
 
-**Multi-runner**: Comma-delimited list of full HTTPS URLs to repositories/organizations
-- Example: `"https://github.com/owner/repo1,https://github.com/owner/repo2"`
+**Multi-runner**: Comma-delimited list of HTTPS URLs to repositories/organizations.
+Supports **abbreviated URLs** for repositories under the same owner.
+
+- **Full URLs**: `"https://github.com/owner/repo1,https://github.com/owner/repo2"`
+- **Abbreviated URLs**: `"https://github.com/owner/repo1,/repo2,/repo3"`
+  - First URL must be full (establishes the base `https://github.com/owner`)
+  - Subsequent URLs starting with `/` are expanded using that base
+  - Example above expands to: `repo1`, `repo2`, `repo3` all under `owner`
 - Spaces around commas are trimmed automatically
 
 ##### `GH_PAT`
@@ -131,7 +149,9 @@ Only for single-runner mode. Not supported with multiple URLs.
 
 **Multi-runner only**: Prefix for runner names.
 Each runner will be named `${RUNNER_NAME_PREFIX}-${repo_name}`.
-- Example: `RUNNER_NAME_PREFIX="ci-runner"` with repo `my-app` → `ci-runner-my-app`
+
+- Example: `RUNNER_NAME_PREFIX="ci-runner"` with repo `my-app` →
+  `ci-runner-my-app`
 - **Required** when using multiple URLs in `GITHUB_URL`
 
 ##### `RUNNER_NAME`

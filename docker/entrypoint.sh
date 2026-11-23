@@ -21,12 +21,51 @@ fi
 RUNNER_LABELS=${RUNNER_LABELS:-default}
 RUNNER_WORKDIR_BASE=${RUNNER_WORKDIR:-_work}
 
+# Base runner installation directory (where config.sh, run.sh, bin/ are located)
+RUNNER_BASE_DIR="/home/runner"
+
 # Start SSH daemon
 echo "Starting SSH Daemon..."
 sudo /usr/sbin/sshd
 
 # Split GITHUB_URL by comma into array
-IFS=',' read -ra GITHUB_URLS <<< "$GITHUB_URL"
+IFS=',' read -ra GITHUB_URLS_RAW <<< "$GITHUB_URL"
+
+# Process URLs: expand abbreviated ones (starting with /) using base from first full URL
+GITHUB_URLS=()
+BASE_URL=""
+for url in "${GITHUB_URLS_RAW[@]}"; do
+    url=$(echo "$url" | xargs)  # trim whitespace
+    if [ -z "$url" ]; then
+        continue
+    fi
+    if [[ "$url" =~ ^/ ]]; then
+        # Abbreviated URL like /repo2 - prepend base URL
+        if [ -z "$BASE_URL" ]; then
+            echo "Error: Abbreviated URL '$url' used but no base URL found (first URL must be full)"
+            exit 1
+        fi
+        GITHUB_URLS+=("${BASE_URL}${url}")
+    else
+        # Full URL - extract base for potential abbreviated URLs later
+        # Base is everything up to and including the owner (e.g., https://github.com/owner)
+        if [[ "$url" =~ ^(https://github\.com/[^/]+/[^/]+) ]]; then
+            # We need the base up to the owner, not including the repo
+            BASE_URL=$(echo "$url" | sed -E 's|^(https://github\.com/[^/]+)/.*$|\1|')
+        fi
+        GITHUB_URLS+=("$url")
+    fi
+done
+
+if [ ${#GITHUB_URLS[@]} -eq 0 ]; then
+    echo "Error: No valid repository URLs found in GITHUB_URL"
+    exit 1
+fi
+
+echo "Resolved repository URLs:"
+for u in "${GITHUB_URLS[@]}"; do
+    echo "  $u"
+done
 
 # Authenticate with gh once using GH_PAT
 echo "Authenticating with GitHub CLI using GH_PAT..."
@@ -57,13 +96,6 @@ trap cleanup SIGTERM SIGINT
 
 # Process each repository URL sequentially
 for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
-    # Trim whitespace
-    GITHUB_URL_ITEM=$(echo "$GITHUB_URL_ITEM" | xargs)
-
-    if [ -z "$GITHUB_URL_ITEM" ]; then
-        continue
-    fi
-
     echo "=========================================="
     echo "Processing repository: $GITHUB_URL_ITEM"
     echo "=========================================="
@@ -88,6 +120,16 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
 
     # Create runner directory
     mkdir -p "$RUNNER_DIR"
+
+    # Symlink runner binaries into runner directory so config.sh and run.sh are available
+    # We need: config.sh, run.sh, bin/, externals/ (if exists)
+    ln -sf "$RUNNER_BASE_DIR/config.sh" "$RUNNER_DIR/config.sh"
+    ln -sf "$RUNNER_BASE_DIR/run.sh" "$RUNNER_DIR/run.sh"
+    ln -sf "$RUNNER_BASE_DIR/bin" "$RUNNER_DIR/bin"
+    if [ -d "$RUNNER_BASE_DIR/externals" ]; then
+        ln -sf "$RUNNER_BASE_DIR/externals" "$RUNNER_DIR/externals"
+    fi
+
     cd "$RUNNER_DIR"
 
     # Cleanup previous configuration if it exists
@@ -130,7 +172,7 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
     echo "Runner $RUNNER_NAME started with PID $RUNNER_PID"
 
     # Go back to base directory for next iteration
-    cd ..
+    cd "$RUNNER_BASE_DIR"
 done
 
 echo "=========================================="

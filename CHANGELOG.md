@@ -1,9 +1,15 @@
 # CHANGELOG
 
+## v1.1.1
+
+- **Fixed** 'entrypoint.sh' call to non-existing config.sh
+- **Fixed** markdownlint issues
+- **Updated** GITHUB_URL handling, so it can be shorter
+
 ## v1.1.0
 
 - **Updated** source image to debian:stable-slim
-- **Updated** the startup sequence in 'entrypoint.sh'to support multiple
+- **Updated** the startup sequence in 'entrypoint.sh' to support multiple
   runners in a single container (see [README.md](README.md) for details)
 
 - **Added** PHP from deb.sury.org and related packages
