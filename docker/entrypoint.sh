@@ -20,6 +20,7 @@ fi
 # Set defaults
 RUNNER_LABELS=${RUNNER_LABELS:-default}
 RUNNER_WORKDIR_BASE=${RUNNER_WORKDIR:-_work}
+FAIL_FAST=${FAIL_FAST:-true}  # Set to "false" to skip failed repos and continue
 
 # Base runner installation directory (where config.sh, run.sh, bin/ are located)
 RUNNER_BASE_DIR="/home/runner"
@@ -28,19 +29,66 @@ RUNNER_BASE_DIR="/home/runner"
 echo "Starting SSH Daemon..."
 sudo /usr/sbin/sshd
 
-# Handle UNREGISTER_TOKENS - unregister runners using provided tokens
-if [ -n "$UNREGISTER_TOKENS" ]; then
+# Handle UNREGISTER_TOKENS - unregister runners using provided tokens (legacy)
+# Also supports UNREGISTER_RUNNERS="repo1,repo2" to remove by name via API
+if [ -n "$UNREGISTER_TOKENS" ] || [ -n "$UNREGISTER_RUNNERS" ]; then
     echo "=========================================="
-    echo "Unregistering runners using provided tokens..."
+    echo "Unregistering runners..."
     echo "=========================================="
-    IFS=',' read -ra UNREGISTER_TOKEN_ARRAY <<< "$UNREGISTER_TOKENS"
-    for token in "${UNREGISTER_TOKEN_ARRAY[@]}"; do
-        token=$(echo "$token" | xargs)  # trim whitespace
-        if [ -n "$token" ]; then
-            echo "Unregistering runner with token: ${token:0:10}..."
-            ./config.sh remove --token "$token" 2>/dev/null || true
-        fi
-    done
+
+    # First, try token-based removal (legacy)
+    if [ -n "$UNREGISTER_TOKENS" ]; then
+        IFS=',' read -ra UNREGISTER_TOKEN_ARRAY <<< "$UNREGISTER_TOKENS"
+        for token in "${UNREGISTER_TOKEN_ARRAY[@]}"; do
+            token=$(echo "$token" | xargs)
+            if [ -n "$token" ]; then
+                echo "Unregistering runner with token: ${token:0:10}..."
+                ./config.sh remove --token "$token" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Then, use GitHub API to remove runners by name (more reliable)
+    # This works without local config files
+    if [ -n "$UNREGISTER_RUNNERS" ]; then
+        echo "Removing runners by name via GitHub API..."
+        IFS=',' read -ra UNREGISTER_REPO_ARRAY <<< "$UNREGISTER_RUNNERS"
+        for repo_item in "${UNREGISTER_REPO_ARRAY[@]}"; do
+            repo_item=$(echo "$repo_item" | xargs)
+            if [ -z "$repo_item" ]; then
+                continue
+            fi
+            # Extract owner/repo from URL or use as-is
+            REPO_PATH=$(echo "$repo_item" | sed 's|https://github.com/||; s|\.git$||')
+            echo "Checking runners for $REPO_PATH..."
+
+            # List runners for this repo
+            RUNNERS_JSON=$(gh api -H "Accept: application/vnd.github+json" \
+                "/repos/$REPO_PATH/actions/runners" 2>/dev/null)
+
+            if [ -z "$RUNNERS_JSON" ] || [ "$RUNNERS_JSON" = "null" ]; then
+                echo "  No runners found or API error for $REPO_PATH"
+                continue
+            fi
+
+            # Find runners matching our prefix
+            RUNNER_IDS=$(echo "$RUNNERS_JSON" | jq -r ".runners[] | select(.name | startswith(\"$RUNNER_NAME_PREFIX-\")) | .id")
+
+            if [ -z "$RUNNER_IDS" ]; then
+                echo "  No runners with prefix '$RUNNER_NAME_PREFIX-' found for $REPO_PATH"
+                continue
+            fi
+
+            for runner_id in $RUNNER_IDS; do
+                echo "  Removing runner ID $runner_id from $REPO_PATH..."
+                gh api --method DELETE -H "Accept: application/vnd.github+json" \
+                    "/repos/$REPO_PATH/actions/runners/$runner_id" 2>/dev/null && \
+                    echo "  Runner $runner_id removed successfully" || \
+                    echo "  Failed to remove runner $runner_id"
+            done
+        done
+    fi
+
     echo "Unregistration complete."
 fi
 
@@ -90,6 +138,7 @@ echo "$GH_PAT" | gh auth login --with-token
 # Array to store runner PIDs
 RUNNER_PIDS=()
 RUNNER_DIRS=()
+FAILED_REPOS=()
 
 # Cleanup function to stop all runners on exit
 cleanup() {
@@ -156,12 +205,36 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
 
     # Generate registration token for this repository
     echo "Generating Registration Token for $REPO_PATH..."
-    GITHUB_TOKEN=$(gh api --method POST -H "Accept: application/vnd.github+json" \
-        "/repos/$REPO_PATH/actions/runners/registration-token" | jq -r .token)
+    # Capture both stdout and stderr to handle errors properly
+    GH_API_OUTPUT=$(gh api --method POST -H "Accept: application/vnd.github+json" "/repos/$REPO_PATH/actions/runners/registration-token" 2>&1)
+    GH_API_EXIT_CODE=$?
+
+    if [ $GH_API_EXIT_CODE -ne 0 ]; then
+        echo "Error: Failed to generate registration token for $REPO_PATH"
+        echo "GitHub API response: $GH_API_OUTPUT"
+        FAILED_REPOS+=("$REPO_PATH")
+        if [ "$FAIL_FAST" = "true" ]; then
+            exit 1
+        else
+            echo "WARNING: Skipping $REPO_PATH due to error (FAIL_FAST=false)"
+            cd "$RUNNER_BASE_DIR"
+            continue
+        fi
+    fi
+
+    GITHUB_TOKEN=$(echo "$GH_API_OUTPUT" | jq -r .token 2>/dev/null)
 
     if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "null" ]; then
-        echo "Error: Failed to generate registration token for $REPO_PATH"
-        exit 1
+        echo "Error: Failed to parse registration token for $REPO_PATH"
+        echo "GitHub API response: $GH_API_OUTPUT"
+        FAILED_REPOS+=("$REPO_PATH")
+        if [ "$FAIL_FAST" = "true" ]; then
+            exit 1
+        else
+            echo "WARNING: Skipping $REPO_PATH due to error (FAIL_FAST=false)"
+            cd "$RUNNER_BASE_DIR"
+            continue
+        fi
     fi
     echo "Registration Token generated successfully."
 
@@ -190,6 +263,20 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
     # Go back to base directory for next iteration
     cd "$RUNNER_BASE_DIR"
 done
+
+if [ ${#FAILED_REPOS[@]} -gt 0 ]; then
+    echo "=========================================="
+    echo "WARNING: The following repositories failed:"
+    for repo in "${FAILED_REPOS[@]}"; do
+        echo "  $repo"
+    done
+    echo "=========================================="
+fi
+
+if [ ${#RUNNER_PIDS[@]} -eq 0 ]; then
+    echo "Error: No runners started successfully."
+    exit 1
+fi
 
 echo "=========================================="
 echo "All ${#RUNNER_PIDS[@]} runners started successfully."

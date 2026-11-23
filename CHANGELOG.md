@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.2.1
+
+- **Enhanced** unregistration process with GitHub API support
+  and error handling
+- **Added** **FAIL_FAST** option to skip failed registrations during startup
+
 ## v1.2.0
 
 - **Added** **UNREGISTER_TOKENS** parameter to support muliple existing runners

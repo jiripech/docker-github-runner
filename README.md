@@ -185,6 +185,28 @@ Example: `UNREGISTER_TOKENS="token1,token2,AAW63K6VAWLL6XJ24GA5CFTLARVMS"`
 
 Each token will be used to run `./config.sh remove --token <token>` before configuring new runners.
 
+##### `UNREGISTER_RUNNERS`
+
+**Optional** comma-separated list of repository URLs/names to clean up runners by name via GitHub API.
+**Recommended over `UNREGISTER_TOKENS`** - works reliably without local config files.
+
+- Format: Same as `GITHUB_URL` (full URLs or abbreviated `/repo` syntax)
+- Uses `GH_PAT` to list and delete runners matching `RUNNER_NAME_PREFIX-*`
+- Removes ALL runners with the prefix for each specified repository
+
+Example: `UNREGISTER_RUNNERS="https://github.com/owner/repo1,/repo2"`
+
+This will delete all runners named `RUNNER_NAME_PREFIX-repo1` and `RUNNER_NAME_PREFIX-repo2` from GitHub.
+
+##### `FAIL_FAST`
+
+**Optional** controls behavior when a repository fails to register.
+
+- `true` (default): Exit immediately on first failure (fail-fast)
+- `false`: Skip failed repositories and continue with remaining ones
+
+Example: `FAIL_FAST=false` allows the container to start runners for accessible repos even if some repos don't exist or PAT lacks access.
+
 ### SSH Access
 
 Port 22 is exposed by default. Map it to a custom port (e.g. 2222)
