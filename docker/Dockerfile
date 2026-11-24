@@ -5,7 +5,7 @@ ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install basic dependencies
-RUN apt-get -y update && apt-get install -y --install-suggestssudo curl
+RUN apt-get -y update && apt-get install -y --install-suggests sudo curl
 RUN apt-get install -y --install-suggests jq git rsync ca-certificates
 RUN apt-get install -y --install-suggests gnupg lsb-release openssh-server
 
