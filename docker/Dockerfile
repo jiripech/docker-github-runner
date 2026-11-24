@@ -5,9 +5,9 @@ ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install basic dependencies
-RUN apt-get -y update && apt-get install -y --install-suggests sudo curl
-RUN apt-get install -y --install-suggests jq git rsync ca-certificates
-RUN apt-get install -y --install-suggests gnupg lsb-release openssh-server
+RUN apt-get -y update && apt-get install -y sudo curl
+RUN apt-get install -y jq git rsync ca-certificates
+RUN apt-get install -y gnupg lsb-release openssh-server
 
 # Create runner user and set shell/password to avoid locked account
 RUN useradd -m -s /bin/bash runner
@@ -15,12 +15,12 @@ RUN echo "runner:runner" | chpasswd
 RUN echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Install some dependecies for later use
-RUN apt-get install -y -qq libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxshmfence1 libx11-xcb1 libxcb-dri3-0 libxcb-randr0 libxcb-shm0 libxcb-xfixes0 libxcb-shape0 libxcb-xinerama0 dbus-system-bus-common
+RUN apt-get install -y -qq libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxshmfence1 libx11-xcb1 libxcb-dri3-0 libxcb-randr0 libxcb-shm0 libxcb-xfixes0 libxcb-shape0 libxcb-xinerama0 dbus-system-bus-common extrepo
 
 # Install Docker CLI
 RUN mkdir -p /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-RUN apt-get -y update && apt-get install -y --install-suggests docker-ce-cli
+RUN apt-get -y update && apt-get install -y docker-ce-cli
 
 # Install GitHub CLI
 RUN mkdir -p /etc/apt/keyrings && \
