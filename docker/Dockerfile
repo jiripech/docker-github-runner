@@ -14,8 +14,8 @@ RUN useradd -m -s /bin/bash runner
 RUN echo "runner:runner" | chpasswd
 RUN echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Install some dependecies for later use
-RUN apt-get install -y -qq libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxshmfence1 libx11-xcb1 libxcb-dri3-0 libxcb-randr0 libxcb-shm0 libxcb-xfixes0 libxcb-shape0 libxcb-xinerama0 dbus-system-bus-common extrepo
+# Install some dependecies for later re-use
+RUN apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxshmfence1 libx11-xcb1 libxcb-dri3-0 libxcb-randr0 libxcb-shm0 libxcb-xfixes0 libxcb-shape0 libxcb-xinerama0 dbus-system-bus-common extrepo fontconfig fontconfig-config fonts-freefont-ttf fonts-ipafont-gothic fonts-liberation fonts-noto-color-emoji fonts-tlwg-loma-otf fonts-unifont fonts-wqy-zenhei libcairo2 libdatrie1 libfontconfig1 libfontenc1 libfreetype6 libfribidi0 libgl1 libgl1-mesa-dri libglvnd0 libglx-mesa0 libglx0 libgraphite2-3 libharfbuzz0b libice6 libpango-1.0-0 libpixman-1-0 libpng16-16t64 libsm6 libthai-data libthai0 libunwind8 libvulkan1 libxaw7 libxcb-glx0 libxcb-render0 libxfont2 libxkbfile1 libxmu6 libxpm4 libxt6t64 libxxf86vm1 x11-xkb-utils xfonts-encodings
 
 # Install Docker CLI
 RUN mkdir -p /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg

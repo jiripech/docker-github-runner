@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.2.4
+
+- **Added** chromium deps
+
 ## v1.2.3
 
 - **Fixed** previously introduced auth issues
