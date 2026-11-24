@@ -5,26 +5,29 @@ ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install basic dependencies
-RUN apt-get -y update && apt-get install -y --no-install-recommends sudo curl
-RUN apt-get install -y --no-install-recommends jq git rsync ca-certificates
-RUN apt-get install -y --no-install-recommends gnupg lsb-release openssh-server
+RUN apt-get -y update && apt-get install -y --install-suggestssudo curl
+RUN apt-get install -y --install-suggests jq git rsync ca-certificates
+RUN apt-get install -y --install-suggestsgnupg lsb-release openssh-server
 
 # Create runner user and set shell/password to avoid locked account
 RUN useradd -m -s /bin/bash runner
 RUN echo "runner:runner" | chpasswd
 RUN echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# Install some dependecies for later use
+RUN apt-get install -y -qq libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libxshmfence1 libx11-xcb1 libxcb-dri3-0 libxcb-randr0 libxcb-shm0 libxcb-xfixes0 libxcb-shape0 libxcb-xinerama0 dbus-system-bus-common
+
 # Install Docker CLI
 RUN mkdir -p /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-RUN apt-get -y update && apt-get install -y docker-ce-cli
+RUN apt-get -y update && apt-get install -y --install-suggests docker-ce-cli
 
 # Install GitHub CLI
 RUN mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/etc/apt/keyrings/githubcli-archive-keyring.gpg && \
     chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
-    apt-get update && apt-get install -y gh
+    apt-get update && apt-get install -y --install-suggests gh
 
 # Install PHP
 RUN curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb && \
@@ -32,7 +35,7 @@ RUN curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/deb
     echo 'debconf debconf/frontend seen false' | debconf-set-selections && \
     dpkg -i /tmp/debsuryorg-archive-keyring.deb && \
     echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php-sury.list && \
-    apt-get update && apt-get install -y php8.6-cli php-pear && rm -rf /var/lib/apt/lists/*
+    apt-get update && apt-get install -y --install-suggests php8.6-cli php-pear && rm -rf /var/lib/apt/lists/*
 
 # SSH Server Configuration
 RUN mkdir -p /var/run/sshd

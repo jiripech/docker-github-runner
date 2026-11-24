@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.2.2
+
+- **Added** '--install-suggests' to apt-get calls to make the resulting image more compatible with various CI tools
+- **Added** more packages to support PlayWright install called from the CI
+
 ## v1.2.1
 
 - **Enhanced** unregistration process with GitHub API support

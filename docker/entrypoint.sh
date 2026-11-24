@@ -133,7 +133,19 @@ done
 
 # Authenticate with gh once using GH_PAT
 echo "Authenticating with GitHub CLI using GH_PAT..."
+# Ensure gh config directory exists and is writable
+mkdir -p "$HOME/.config/gh"
+chmod 700 "$HOME/.config/gh"
+# Set GH_TOKEN env var for gh CLI (works better than stdin in containers)
+export GH_TOKEN="$GH_PAT"
+# Also try auth login for good measure
 echo "$GH_PAT" | gh auth login --with-token
+# Verify authentication worked
+echo "Verifying GitHub authentication..."
+gh auth status
+# Test API access with a simple call
+echo "Testing GitHub API access..."
+gh api "/user" --jq '.login' || echo "API test failed, but continuing..."
 
 # Array to store runner PIDs
 RUNNER_PIDS=()
@@ -206,8 +218,20 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
     # Generate registration token for this repository
     echo "Generating Registration Token for $REPO_PATH..."
     # Capture both stdout and stderr to handle errors properly
-    GH_API_OUTPUT=$(gh api --method POST -H "Accept: application/vnd.github+json" "/repos/$REPO_PATH/actions/runners/registration-token" 2>&1)
+    # Use timeout to prevent hanging (30 seconds)
+    GH_API_OUTPUT=$(timeout 30 gh api --method POST -H "Accept: application/vnd.github+json" "/repos/$REPO_PATH/actions/runners/registration-token" 2>&1)
     GH_API_EXIT_CODE=$?
+    if [ $GH_API_EXIT_CODE -eq 124 ]; then
+        echo "Error: Timeout generating registration token for $REPO_PATH (30s)"
+        FAILED_REPOS+=("$REPO_PATH")
+        if [ "$FAIL_FAST" = "true" ]; then
+            exit 1
+        else
+            echo "WARNING: Skipping $REPO_PATH due to timeout (FAIL_FAST=false)"
+            cd "$RUNNER_BASE_DIR"
+            continue
+        fi
+    fi
 
     if [ $GH_API_EXIT_CODE -ne 0 ]; then
         echo "Error: Failed to generate registration token for $REPO_PATH"
