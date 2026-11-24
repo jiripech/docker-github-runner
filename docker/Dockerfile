@@ -7,7 +7,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Install basic dependencies
 RUN apt-get -y update && apt-get install -y --install-suggestssudo curl
 RUN apt-get install -y --install-suggests jq git rsync ca-certificates
-RUN apt-get install -y --install-suggestsgnupg lsb-release openssh-server
+RUN apt-get install -y --install-suggests gnupg lsb-release openssh-server
 
 # Create runner user and set shell/password to avoid locked account
 RUN useradd -m -s /bin/bash runner
