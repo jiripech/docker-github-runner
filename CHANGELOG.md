@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.2.3
+
+- **Fixed** previously introduced auth issues
+
 ## v1.2.2
 
 - **Added** '--install-suggests' to apt-get calls to make the resulting image more compatible with various CI tools

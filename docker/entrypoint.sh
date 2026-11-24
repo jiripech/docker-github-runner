@@ -133,13 +133,8 @@ done
 
 # Authenticate with gh once using GH_PAT
 echo "Authenticating with GitHub CLI using GH_PAT..."
-# Ensure gh config directory exists and is writable
-mkdir -p "$HOME/.config/gh"
-chmod 700 "$HOME/.config/gh"
-# Set GH_TOKEN env var for gh CLI (works better than stdin in containers)
+# Set GH_TOKEN env var for gh CLI (works better than stored credentials in containers)
 export GH_TOKEN="$GH_PAT"
-# Also try auth login for good measure
-echo "$GH_PAT" | gh auth login --with-token
 # Verify authentication worked
 echo "Verifying GitHub authentication..."
 gh auth status
