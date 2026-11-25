@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.2.6
+
+- **Switched** `gh api` call to `curl` for better transparency while generating
+  registration tokens
+
 ## v1.2.5
 
 - **Added** persistent mount folder to presere per runner _diag data and configurations

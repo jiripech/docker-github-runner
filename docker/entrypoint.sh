@@ -224,12 +224,23 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
 
     # Generate registration token for this repository
     echo "Generating Registration Token for $REPO_PATH..."
-    # Capture both stdout and stderr to handle errors properly
-    # Use timeout to prevent hanging (10 seconds)
-    GH_API_OUTPUT=$(timeout 10 gh api --method POST -H "Accept: application/vnd.github+json" "/repos/$REPO_PATH/actions/runners/registration-token" 2>&1)
-    GH_API_EXIT_CODE=$?
-    if [ $GH_API_EXIT_CODE -eq 124 ]; then
-        echo "Error: Timeout generating registration token for $REPO_PATH (30s)"
+    # Use curl directly with GH_PAT as Bearer token for better error visibility
+    # Save response and error to separate files for debugging
+    RESPONSE_FILE="registration_token_${REPO_NAME}.json"
+    ERROR_FILE="registration_token_${REPO_NAME}.err"
+
+    echo "  Calling GitHub API: POST /repos/$REPO_PATH/actions/runners/registration-token"
+    HTTP_CODE=$(curl -sS -m 10 -w "%{http_code}" -o "$RESPONSE_FILE" -X POST \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer $GH_PAT" \
+        "https://api.github.com/repos/$REPO_PATH/actions/runners/registration-token" 2>"$ERROR_FILE")
+    CURL_EXIT_CODE=$?
+
+    # See curl errors on stdout if any
+    [ -s "$ERROR_FILE" ] && echo "  curl stderr: $(cat "$ERROR_FILE")"
+
+    if [ $CURL_EXIT_CODE -eq 124 ]; then
+        echo "Error: Timeout generating registration token for $REPO_PATH (10s)"
         FAILED_REPOS+=("$REPO_PATH")
         if [ "$FAIL_FAST" = "true" ]; then
             exit 1
@@ -240,34 +251,51 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
         fi
     fi
 
-    if [ $GH_API_EXIT_CODE -ne 0 ]; then
-        echo "Error: Failed to generate registration token for $REPO_PATH"
-        echo "GitHub API response: $GH_API_OUTPUT"
+    if [ $CURL_EXIT_CODE -ne 0 ]; then
+        echo "Error: curl failed with exit code $CURL_EXIT_CODE for $REPO_PATH"
         FAILED_REPOS+=("$REPO_PATH")
         if [ "$FAIL_FAST" = "true" ]; then
             exit 1
         else
-            echo "WARNING: Skipping $REPO_PATH due to error (FAIL_FAST=false)"
+            echo "WARNING: Skipping $REPO_PATH due to curl error (FAIL_FAST=false)"
             cd "$RUNNER_DATA_DIR"
             continue
         fi
     fi
 
-    GITHUB_TOKEN=$(echo "$GH_API_OUTPUT" | jq -r .token | sed 's/\"//g' 2>/dev/null)
+    echo "  HTTP response code: $HTTP_CODE"
 
-    if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "null" ]; then
-        echo "Error: Failed to parse registration token for $REPO_PATH"
-        echo "GitHub API response: $GH_API_OUTPUT"
+    if [ "$HTTP_CODE" -ne 201 ] && [ "$HTTP_CODE" -ne 200 ]; then
+        echo "Error: GitHub API returned HTTP $HTTP_CODE for $REPO_PATH"
+        echo "  Response: $(cat "$RESPONSE_FILE")"
         FAILED_REPOS+=("$REPO_PATH")
         if [ "$FAIL_FAST" = "true" ]; then
             exit 1
         else
-            echo "WARNING: Skipping $REPO_PATH due to error (FAIL_FAST=false)"
+            echo "WARNING: Skipping $REPO_PATH due to API error (FAIL_FAST=false)"
+            cd "$RUNNER_DATA_DIR"
+            continue
+        fi
+    fi
+
+    GITHUB_TOKEN=$(jq -r .token "$RESPONSE_FILE" 2>/dev/null | sed 's/\"//g')
+
+    if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "null" ]; then
+        echo "Error: Failed to parse registration token for $REPO_PATH"
+        echo "  Response: $(cat "$RESPONSE_FILE")"
+        FAILED_REPOS+=("$REPO_PATH")
+        if [ "$FAIL_FAST" = "true" ]; then
+            exit 1
+        else
+            echo "WARNING: Skipping $REPO_PATH due to parse error (FAIL_FAST=false)"
             cd "$RUNNER_DATA_DIR"
             continue
         fi
     fi
     echo "Registration Token generated successfully."
+
+    # Clean up temp files
+    rm -f "$RESPONSE_FILE" "$ERROR_FILE"
 
     # Configure the runner
     echo "Configuring GitHub Runner for $REPO_PATH..."
