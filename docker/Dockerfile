@@ -5,9 +5,7 @@ ARG TARGETARCH
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install basic dependencies
-RUN apt-get -y update && apt-get install -y sudo curl
-RUN apt-get install -y jq git rsync ca-certificates
-RUN apt-get install -y gnupg lsb-release openssh-server
+RUN apt-get -y update && apt-get install -y sudo curl jq git rsync ca-certificates gnupg lsb-release openssh-server
 
 # Create runner user and set shell/password to avoid locked account
 RUN useradd -m -s /bin/bash runner
@@ -45,6 +43,9 @@ COPY authorized_keys /home/runner/.ssh/authorized_keys
 RUN chown -R runner:runner /home/runner/.ssh && \
     chmod 700 /home/runner/.ssh && \
     chmod 600 /home/runner/.ssh/authorized_keys
+
+# Create persistent data directory for runner configurations
+RUN mkdir -p /data && chown runner:runner /data && chmod 755 /data
 
 EXPOSE 22
 

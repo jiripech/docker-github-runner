@@ -230,24 +230,40 @@ ssh -p 2222 runner@localhost
 
 ### Data Persistence (Logs & Cache)
 
-To inspect logs from the host or persist the build cache between restarts,
-map volume mounts to these internal paths:
-
-- `_diag`: Runner logs.
-- `_work`: Build workspace (repo checkout, build artifacts).
+All runner data (configurations, logs, workspaces) is now stored in `/data` inside the container.
+Mount a single volume to `/data` to persist everything:
 
 **Example:**
 
 ```bash
-mkdir -p ./.runner/logs ./.runner/work
+mkdir -p ./.runner/data
 
 docker run -d \
-  -v $(pwd)/.runner/logs:/home/runner/_diag \
-  -v $(pwd)/.runner/work:/home/runner/_work \
-  -e GITHUB_URL="..." \
-  -e GH_PAT="..." \
+  -v $(pwd)/.runner/data:/data \
+  -e GITHUB_URL="https://github.com/owner/repo1,/repo2" \
+  -e GH_PAT="ghp_..." \
+  -e RUNNER_NAME_PREFIX="my-runner" \
   <image-name>
 ```
+
+This creates the following structure on the host:
+```
+.runner/data/
+├── runner-repo1/
+│   ├── _diag/      # Runner 1 logs
+│   ├── _work/      # Runner 1 workspace
+│   ├── .runner     # Runner 1 config
+│   └── .credentials
+├── runner-repo2/
+│   ├── _diag/      # Runner 2 logs
+│   ├── _work/      # Runner 2 workspace
+│   ├── .runner     # Runner 2 config
+│   └── .credentials
+├── _work/          # Base work directory (legacy)
+└── ...
+```
+
+**Note**: The runner binaries (config.sh, run.sh, bin/) remain in the image at `/home/runner` and are symlinked into each runner's directory. Only `/data` needs to be persisted.
 
 **Note on Permissions:** The runner runs as user `runner` (uid 1000).
 Ensure your host directories are accessible/writable by this user,

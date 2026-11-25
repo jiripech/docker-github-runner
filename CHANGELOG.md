@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.2.5
+
+- **Added** persistent mount folder to presere per runner _diag data and configurations
+
 ## v1.2.4
 
 - **Added** chromium deps

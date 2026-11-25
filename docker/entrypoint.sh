@@ -22,12 +22,18 @@ RUNNER_LABELS=${RUNNER_LABELS:-default}
 RUNNER_WORKDIR_BASE=${RUNNER_WORKDIR:-_work}
 FAIL_FAST=${FAIL_FAST:-true}  # Set to "false" to skip failed repos and continue
 
-# Base runner installation directory (where config.sh, run.sh, bin/ are located)
+# Base runner installation directory (where config.sh, run.sh, bin/ are located - read-only from image)
 RUNNER_BASE_DIR="/home/runner"
+# Persistent data directory for runner configurations (mounted volume)
+RUNNER_DATA_DIR="/data"
 
 # Start SSH daemon
 echo "Starting SSH Daemon..."
 sudo /usr/sbin/sshd
+
+# Ensure data directory exists and is writable
+mkdir -p "$RUNNER_DATA_DIR"
+cd "$RUNNER_DATA_DIR"
 
 # Handle UNREGISTER_TOKENS - unregister runners using provided tokens (legacy)
 # Also supports UNREGISTER_RUNNERS="repo1,repo2" to remove by name via API
@@ -37,8 +43,10 @@ if [ -n "$UNREGISTER_TOKENS" ] || [ -n "$UNREGISTER_RUNNERS" ]; then
     echo "=========================================="
 
     # First, try token-based removal (legacy)
+    # Run from RUNNER_BASE_DIR where config.sh exists
     if [ -n "$UNREGISTER_TOKENS" ]; then
         IFS=',' read -ra UNREGISTER_TOKEN_ARRAY <<< "$UNREGISTER_TOKENS"
+        cd "$RUNNER_BASE_DIR"
         for token in "${UNREGISTER_TOKEN_ARRAY[@]}"; do
             token=$(echo "$token" | xargs)
             if [ -n "$token" ]; then
@@ -46,6 +54,7 @@ if [ -n "$UNREGISTER_TOKENS" ] || [ -n "$UNREGISTER_RUNNERS" ]; then
                 ./config.sh remove --token "$token" 2>/dev/null || true
             fi
         done
+        cd "$RUNNER_DATA_DIR"
     fi
 
     # Then, use GitHub API to remove runners by name (more reliable)
@@ -182,9 +191,9 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
     # Construct runner name from prefix + repo name
     RUNNER_NAME="${RUNNER_NAME_PREFIX}-${REPO_NAME}"
 
-    # Create isolated runner directory
-    RUNNER_DIR="runner-${REPO_NAME}"
-    RUNNER_WORKDIR="${RUNNER_WORKDIR_BASE}/${REPO_NAME}"
+    # Create isolated runner directory under persistent data directory
+    RUNNER_DIR="${RUNNER_DATA_DIR}/runner-${REPO_NAME}"
+    RUNNER_WORKDIR="${RUNNER_DATA_DIR}/${RUNNER_WORKDIR_BASE}/${REPO_NAME}"
 
     echo "Runner Name: $RUNNER_NAME"
     echo "Runner Directory: $RUNNER_DIR"
@@ -210,11 +219,14 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
         ./config.sh remove --token "$GITHUB_TOKEN" 2>/dev/null || true
     fi
 
+    echo "Cleaning up old runner files and credentials..."
+    rm -rf .runner .credentials* 2>/dev/null || true
+
     # Generate registration token for this repository
     echo "Generating Registration Token for $REPO_PATH..."
     # Capture both stdout and stderr to handle errors properly
-    # Use timeout to prevent hanging (30 seconds)
-    GH_API_OUTPUT=$(timeout 30 gh api --method POST -H "Accept: application/vnd.github+json" "/repos/$REPO_PATH/actions/runners/registration-token" 2>&1)
+    # Use timeout to prevent hanging (10 seconds)
+    GH_API_OUTPUT=$(timeout 10 gh api --method POST -H "Accept: application/vnd.github+json" "/repos/$REPO_PATH/actions/runners/registration-token" 2>&1)
     GH_API_EXIT_CODE=$?
     if [ $GH_API_EXIT_CODE -eq 124 ]; then
         echo "Error: Timeout generating registration token for $REPO_PATH (30s)"
@@ -223,7 +235,7 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
             exit 1
         else
             echo "WARNING: Skipping $REPO_PATH due to timeout (FAIL_FAST=false)"
-            cd "$RUNNER_BASE_DIR"
+            cd "$RUNNER_DATA_DIR"
             continue
         fi
     fi
@@ -236,12 +248,12 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
             exit 1
         else
             echo "WARNING: Skipping $REPO_PATH due to error (FAIL_FAST=false)"
-            cd "$RUNNER_BASE_DIR"
+            cd "$RUNNER_DATA_DIR"
             continue
         fi
     fi
 
-    GITHUB_TOKEN=$(echo "$GH_API_OUTPUT" | jq -r .token 2>/dev/null)
+    GITHUB_TOKEN=$(echo "$GH_API_OUTPUT" | jq -r .token | sed 's/\"//g' 2>/dev/null)
 
     if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "null" ]; then
         echo "Error: Failed to parse registration token for $REPO_PATH"
@@ -251,7 +263,7 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
             exit 1
         else
             echo "WARNING: Skipping $REPO_PATH due to error (FAIL_FAST=false)"
-            cd "$RUNNER_BASE_DIR"
+            cd "$RUNNER_DATA_DIR"
             continue
         fi
     fi
@@ -259,14 +271,7 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
 
     # Configure the runner
     echo "Configuring GitHub Runner for $REPO_PATH..."
-    ./config.sh \
-        --url "$GITHUB_URL_ITEM" \
-        --token "$GITHUB_TOKEN" \
-        --name "$RUNNER_NAME" \
-        --work "$RUNNER_WORKDIR" \
-        --labels "$RUNNER_LABELS" \
-        --unattended \
-        --replace
+    ./config.sh --url "$GITHUB_URL_ITEM" --token "$GITHUB_TOKEN" --name "$RUNNER_NAME" --work "$RUNNER_WORKDIR" --labels "$RUNNER_LABELS" --unattended--replace
 
     echo "Configuration done for $RUNNER_NAME."
 
@@ -279,8 +284,8 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
 
     echo "Runner $RUNNER_NAME started with PID $RUNNER_PID"
 
-    # Go back to base directory for next iteration
-    cd "$RUNNER_BASE_DIR"
+    # Go back to data directory for next iteration
+    cd "$RUNNER_DATA_DIR"
 done
 
 if [ ${#FAILED_REPOS[@]} -gt 0 ]; then
