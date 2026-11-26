@@ -4,10 +4,12 @@
 
 - **Switched** `gh api` call to `curl` for better transparency while generating
   registration tokens
+- **Simplified** directory structure in **/data** to remove '$REPO_NAME'
+  duplications
 
 ## v1.2.5
 
-- **Added** persistent mount folder to presere per runner _diag data and configurations
+- **Added** persistent mount folder to presere per runner **_diag** data and configurations
 
 ## v1.2.4
 

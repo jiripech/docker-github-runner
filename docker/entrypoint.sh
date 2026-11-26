@@ -192,8 +192,8 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
     RUNNER_NAME="${RUNNER_NAME_PREFIX}-${REPO_NAME}"
 
     # Create isolated runner directory under persistent data directory
-    RUNNER_DIR="${RUNNER_DATA_DIR}/runner-${REPO_NAME}"
-    RUNNER_WORKDIR="${RUNNER_DATA_DIR}/${RUNNER_WORKDIR_BASE}/${REPO_NAME}"
+    RUNNER_DIR="${RUNNER_DATA_DIR}/${REPO_NAME}"
+    RUNNER_WORKDIR="${RUNNER_DATA_DIR}/${RUNNER_WORKDIR_BASE}"
 
     echo "Runner Name: $RUNNER_NAME"
     echo "Runner Directory: $RUNNER_DIR"
