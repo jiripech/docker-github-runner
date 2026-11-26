@@ -239,7 +239,7 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
     # See curl errors on stdout if any
     [ -s "$ERROR_FILE" ] && echo "  curl stderr: $(cat "$ERROR_FILE")"
 
-    if [ $CURL_EXIT_CODE -eq 124 ]; then
+    if [ $CURL_EXIT_CODE -eq 28 ]; then
         echo "Error: Timeout generating registration token for $REPO_PATH (10s)"
         FAILED_REPOS+=("$REPO_PATH")
         if [ "$FAIL_FAST" = "true" ]; then

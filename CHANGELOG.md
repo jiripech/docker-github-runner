@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.2.7
+
+- **Updated** timeout error code handling for registration token generation
+
 ## v1.2.6
 
 - **Switched** `gh api` call to `curl` for better transparency while generating
