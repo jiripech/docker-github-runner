@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v1.2.8
+
+- **Fixed** typo in runner configuration command
+
 ## v1.2.7
 
 - **Updated** timeout error code handling for registration token generation

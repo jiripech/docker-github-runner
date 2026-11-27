@@ -299,7 +299,7 @@ for GITHUB_URL_ITEM in "${GITHUB_URLS[@]}"; do
 
     # Configure the runner
     echo "Configuring GitHub Runner for $REPO_PATH..."
-    ./config.sh --url "$GITHUB_URL_ITEM" --token "$GITHUB_TOKEN" --name "$RUNNER_NAME" --work "$RUNNER_WORKDIR" --labels "$RUNNER_LABELS" --unattended--replace
+    ./config.sh --url "$GITHUB_URL_ITEM" --token "$GITHUB_TOKEN" --name "$RUNNER_NAME" --work "$RUNNER_WORKDIR" --labels "$RUNNER_LABELS" --unattended --replace
 
     echo "Configuration done for $RUNNER_NAME."
 
