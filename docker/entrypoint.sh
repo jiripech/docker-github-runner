@@ -2,10 +2,9 @@
 set -e
 
 # Main entrypoint for GitHub Actions Runner container
-# Sources modular scripts from docker/lib/
+# Sources modular scripts from /lib/ (copied in Dockerfile)
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="${SCRIPT_DIR}/lib"
+LIB_DIR="/lib"
 
 # Source all modules
 source "${LIB_DIR}/validate.sh"

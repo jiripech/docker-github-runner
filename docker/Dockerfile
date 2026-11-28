@@ -61,7 +61,8 @@ RUN GH_RUNNER_VERSION=$(curl -s https://api.github.com/repos/actions/runner/rele
     && ./bin/installdependencies.sh
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && chown runner:runner /entrypoint.sh
+COPY lib/ /lib/
+RUN chmod +x /entrypoint.sh /lib/*.sh && chown -R runner:runner /entrypoint.sh /lib/
 
 USER runner
 ENTRYPOINT ["/entrypoint.sh"]

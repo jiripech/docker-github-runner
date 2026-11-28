@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.3.1
+
+- **Fixed** Dockerfile: added missing `COPY lib/ /lib/` to include modular entrypoint scripts
+  (they were left out of the image in v1.3.0, making the container fail to start)
+
 ## v1.3.0
 
 - **Refactored** `entrypoint.sh` into modular scripts under `docker/lib/`:
