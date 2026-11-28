@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v1.3.0
+
+- **Refactored** `entrypoint.sh` into modular scripts under `docker/lib/`:
+  - `validate.sh` - Environment validation and defaults
+  - `ssh.sh` - SSH daemon startup
+  - `unregister.sh` - UNREGISTER_TOKENS/RUNNERS logic
+  - `urls.sh` - Parse GITHUB_URL into array
+  - `runner.sh` - Per-repo runner setup and start
+  - `wait.sh` - Summary and wait for runner PIDs with exit codes
+- **Fixed** runner isolation: each runner now gets its own copied installation
+  (via `rsync`) instead of symlinks, fixing "already configured" errors
+- **Added** proper exit code capture for background runner processes
+
 ## v1.2.8
 
 - **Fixed** typo in runner configuration command
